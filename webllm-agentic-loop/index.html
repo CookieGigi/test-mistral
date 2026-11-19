@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebLLM Agentic Loop</title>
+    <style>
+      :root {
+        --bg: #111418;
+        --panel: #1a1f26;
+        --border: #2c333d;
+        --text: #e6e9ed;
+        --muted: #8b949e;
+        --accent: #4f8cff;
+        --danger: #e5534b;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      header {
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      header h1 { font-size: 16px; margin: 0; }
+      select, button, input {
+        background: var(--panel);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 6px 10px;
+        font-size: 13px;
+      }
+      button { cursor: pointer; }
+      button:disabled { opacity: 0.45; cursor: not-allowed; }
+      button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+      button.stop { background: var(--danger); border-color: var(--danger); color: #fff; }
+      #status { color: var(--muted); font-size: 12px; margin-left: auto; }
+      #context-wrap {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        padding: 12px 16px;
+        gap: 8px;
+        min-height: 0;
+      }
+      #context {
+        flex: 1;
+        resize: none;
+        font-family: ui-monospace, monospace;
+        font-size: 13px;
+        line-height: 1.5;
+        background: var(--panel);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+      }
+      #context.readonly { border-color: var(--accent); }
+      #counter {
+        font-size: 12px;
+        color: var(--muted);
+        display: flex;
+        gap: 16px;
+        align-items: center;
+      }
+      #counter .over { color: var(--danger); }
+      #controls { display: flex; gap: 8px; align-items: center; }
+      #controls label { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 4px; }
+      #controls input[type="number"] { width: 64px; }
+      #bar {
+        height: 4px;
+        border-radius: 2px;
+        background: var(--border);
+        width: 220px;
+        overflow: hidden;
+      }
+      #bar-fill {
+        height: 100%;
+        width: 0%;
+        background: var(--accent);
+        transition: width 0.15s;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>WebLLM Agentic Loop</h1>
+      <select id="model" aria-label="Model"></select>
+      <button id="load" class="primary">Load model</button>
+      <div id="bar"><div id="bar-fill"></div></div>
+      <span id="status">Pick a model and load it (needs a WebGPU browser).</span>
+    </header>
+    <div id="context-wrap">
+      <textarea
+        id="context"
+        spellcheck="false"
+        placeholder="This text area is the whole context. Edit freely, then press Run. It is capped at the model's max context size."
+      ></textarea>
+      <div id="counter">
+        <span id="token-count">tokens: 0 / ?</span>
+        <div id="bar"></div>
+        <div id="controls">
+          <label>max tokens <input id="max-tokens" type="number" value="256" min="16" step="16" /></label>
+          <label>max iterations <input id="max-iters" type="number" value="1" min="1" max="50" /></label>
+          <button id="run" class="primary" disabled>Run</button>
+          <button id="stop" class="stop" disabled>Stop</button>
+          <button id="reset" disabled>Reset context</button>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
