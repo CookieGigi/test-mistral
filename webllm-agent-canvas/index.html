@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Canvas — an agent that lives in your textarea</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div id="webgpu-warning" class="banner hidden"></div>
+
+    <header class="topbar">
+      <div class="brand">
+        <span class="logo">▣</span>
+        <span class="name">The Canvas</span>
+        <span class="tag">an agent that lives in your textarea</span>
+      </div>
+      <div class="topbar-actions">
+        <select id="mode" title="Agent mode (rewrites the protocol preamble)">
+          <option value="scribe">Mode: Scribe</option>
+          <option value="planner">Mode: Planner</option>
+          <option value="researcher">Mode: Researcher</option>
+          <option value="cartographer">Mode: Cartographer</option>
+        </select>
+        <select id="model" title="WebLLM model"></select>
+        <button id="load" title="Load model into WebGPU">⚡ Load model</button>
+        <button id="export" title="Download canvas as Markdown">⇩ Export</button>
+        <button id="import-btn" title="Import a .md or .txt file">⇧ Import</button>
+        <input id="import" type="file" accept=".md,.txt,.markdown,text/plain" hidden />
+        <button id="theme" title="Toggle theme">☾</button>
+        <button id="help" title="Keyboard shortcuts & protocol (?)">?</button>
+      </div>
+    </header>
+
+    <div class="meter-row">
+      <div id="bar" class="meter"><div id="bar-fill"></div></div>
+      <span id="token-count">tokens: — (load a model)</span>
+      <button id="trim" class="ghost" title="Drop oldest unpinned sections to fit the budget">✂ Auto-trim</button>
+    </div>
+
+    <main class="workspace">
+      <aside class="sidebar" id="left">
+        <div class="pane-head">Outline <span class="hint">click to jump · 📌 pins</span></div>
+        <div id="outline" class="outline"></div>
+        <div class="pane-head">Snapshots <span class="hint">before each agent step</span></div>
+        <div id="snapshots" class="snapshots"></div>
+        <button id="snapshot" class="ghost wide" title="Save a manual snapshot (Ctrl+S)">＋ Snapshot</button>
+        <div class="stats" id="stats">—</div>
+      </aside>
+
+      <section class="canvas-pane">
+        <textarea id="canvas" spellcheck="false"
+          placeholder="Everything here is the agent's entire world. It reads it, edits it, and writes into it. Type a mission below and press Run."></textarea>
+        <div class="statusline"><span id="status">Model not loaded.</span></div>
+      </section>
+
+      <aside class="sidebar" id="right">
+        <div class="pane-head">Mission</div>
+        <div class="mission">
+          <textarea id="goal" placeholder="e.g. Outline, draft and polish a haiku about tiny models, then save it in section Haiku."></textarea>
+          <button id="run" disabled title="Start the agent (Ctrl+Enter)">▶ Run agent</button>
+          <button id="stop" disabled title="Stop after current step (Esc)">■ Stop</button>
+          <div class="params">
+            <label>Steps <input id="steps" type="number" min="1" max="50" value="10" /></label>
+            <label>Max tok/step <input id="max-tokens" type="number" min="16" max="4096" value="192" /></label>
+            <label>Temp <input id="temp" type="number" min="0" max="2" step="0.1" value="0.7" /></label>
+          </div>
+        </div>
+        <div id="ask-box" class="ask-box hidden">
+          <div class="pane-head">🗣 The agent asks</div>
+          <div id="ask-question" class="ask-question"></div>
+          <textarea id="ask-answer" placeholder="Your answer is injected into the canvas as « Human: … »"></textarea>
+          <button id="ask-send">Reply & resume</button>
+        </div>
+        <div class="pane-head">Agent activity</div>
+        <div id="log" class="log"></div>
+      </aside>
+    </main>
+
+    <div id="help-overlay" class="overlay hidden">
+      <div class="sheet">
+        <h2>The Canvas — how it works</h2>
+        <p>
+          The textarea at the center is the <em>only</em> thing the agent can see and touch.
+          It works in steps: read the canvas → emit plain notes and <b>directives</b> →
+          the directives physically edit the canvas → repeat. Every step is snapshotted,
+          token counts are recomputed live, and the loop stops on <code>[[done]]</code>,
+          step limit, or Stop.
+        </p>
+        <h3>Directives the agent may emit</h3>
+        <pre>[[write: Name]] … [[end]]     rewrite section «Name» (create it if needed)
+[[append: Name]] … [[end]]    add lines at the end of section «Name»
+[[note: one line]]            quick note into section «Notes»
+[[delete: Name]]              remove a section entirely
+[[find: pattern]]             grep the canvas; results land in «Findings»
+[[pin: Name]] / [[unpin: Name]]   protect a section from auto-trim
+[[ask: question]]             pause and wait for a human answer
+[[done]]                      mission complete</pre>
+        <h3>Sections</h3>
+        <p>
+          Any line starting with <code>##</code> starts a named section. The outline
+          (left) lists them with token weight; pinned sections survive auto-trim.
+        </p>
+        <h3>Keyboard</h3>
+        <pre>Ctrl+Enter  run the agent          Esc      stop the agent
+Ctrl+S      manual snapshot        Tab      indent in canvas
+Alt+1..5    jump to outline item</pre>
+        <button id="help-close" class="close">Got it</button>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
