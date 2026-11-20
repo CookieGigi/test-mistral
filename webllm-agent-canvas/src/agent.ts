@@ -40,6 +40,7 @@ export interface AgentResult {
   stoppedByUser: boolean;
   declaredDone: boolean;
   pausedForAsk: boolean;
+  degenerate: boolean;
   aborted: string | null;
 }
 
@@ -59,6 +60,7 @@ export async function runAgent(opts: AgentOptions): Promise<AgentResult> {
     stoppedByUser: false,
     declaredDone: false,
     pausedForAsk: false,
+    degenerate: false,
     aborted: null,
   };
 
@@ -190,10 +192,12 @@ export async function runAgent(opts: AgentOptions): Promise<AgentResult> {
         stream: true,
         max_tokens: opts.maxTokens,
         temperature: opts.temperature,
+        repetition_penalty: 1.1,
         stop: ["[[done]"],
       })) as AsyncIterable<{ choices: { text?: string; finish_reason?: string }[] }>;
 
       let lineBuf = "";
+      let outBuf = "";
       for await (const chunk of stream) {
         if (opts.shouldStop()) {
           result.stoppedByUser = true;
@@ -204,6 +208,15 @@ export async function runAgent(opts: AgentOptions): Promise<AgentResult> {
         const delta = chunk.choices[0]?.text ?? "";
         produced += delta.length;
         lineBuf += delta;
+        outBuf += delta;
+
+        if (isDegenerate(outBuf)) {
+          result.degenerate = true;
+          opts.onEvent({ type: "sys", text: "repetition loop detected — stopping this step before it floods the canvas" });
+          await opts.engine.interruptGenerate();
+          interrupted = true;
+          break;
+        }
 
         let nl: number;
         let halted = false;
@@ -252,6 +265,10 @@ Human replied: ${answer}`));
     }
     if (stopSignal === "done") break;
     if (result.stoppedByUser) break;
+    if (result.degenerate) {
+      opts.onEvent({ type: "sys", text: "step degenerated into repetition — aborting mission; trim «Notes» and re-run" });
+      break;
+    }
     if (produced === 0) {
       opts.onEvent({ type: "sys", text: "empty step — stopping early" });
       break;
@@ -260,6 +277,23 @@ Human replied: ${answer}`));
 
   applyText(opts.getCanvas());
   return result;
+}
+
+function isDegenerate(out: string): boolean {
+  if (out.length < 60) return false;
+  const tail = out.slice(-600);
+  for (let k = 2; k <= 40; k++) {
+    const unit = tail.slice(-k);
+    if (unit.trim().length === 0 || unit.trim().length !== k) continue;
+    let count = 0;
+    let i = tail.length;
+    while (i - k >= 0 && tail.slice(i - k, i) === unit) {
+      count++;
+      i -= k;
+    }
+    if (count >= 6) return true;
+  }
+  return false;
 }
 
 function buildPrompt(opts: AgentOptions, canvas: string): string {
