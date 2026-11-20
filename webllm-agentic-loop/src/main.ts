@@ -2,6 +2,7 @@ import { CreateMLCEngine, prebuiltAppConfig } from "@mlc-ai/web-llm";
 import type { MLCEngine, ModelRecord } from "@mlc-ai/web-llm";
 import { computeBudget, countTokens } from "./tokens";
 import { runLoop } from "./loop";
+import { checkWebGPU } from "./gpu";
 
 const DEFAULT_MODEL = "Qwen2.5-0.5B-Instruct-q4f16_1-MLC";
 
@@ -77,6 +78,19 @@ async function loadModel() {
   const modelId = modelSelect.value;
   loadBtn.disabled = true;
   modelSelect.disabled = true;
+  setStatus("Checking WebGPU availability...");
+  const gpuCheck = await checkWebGPU();
+  if (!gpuCheck.ok) {
+    const bannerEl = document.getElementById("webgpu-warning");
+    if (bannerEl) {
+      bannerEl.textContent = gpuCheck.message;
+      bannerEl.classList.remove("hidden");
+    }
+    setStatus(`Cannot load (${gpuCheck.kind}). ${gpuCheck.message.split("\n")[0]}`);
+    loadBtn.disabled = false;
+    modelSelect.disabled = false;
+    return;
+  }
   setStatus("Loading model (first run downloads weights)...");
   contextArea.readOnly = true;
   try {
@@ -93,7 +107,15 @@ async function loadModel() {
     setBusyState(false);
     resetBtn.disabled = false;
   } catch (e) {
-    setStatus(`Load failed: ${e instanceof Error ? e.message : String(e)}`);
+    const raw = e instanceof Error ? e.message : String(e);
+    if (/maxComputeWorkgroupStorageSize/i.test(raw)) {
+      const limit = /limit=(\d+)/.exec(raw)?.[1];
+      setStatus(`Load failed: this browser caps WebGPU compute shared memory at ${limit ?? "16"}K bytes but WebLLM needs 32K. Firefox cannot run WebLLM today — use Chrome or Edge 113+.`);
+    } else if (/compatible GPU/i.test(raw)) {
+      setStatus("Load failed: no compatible GPU. Enable hardware acceleration (Chrome Settings → System), check chrome://gpu, and in VMs/remote desktop you need GPU pass-through.");
+    } else {
+      setStatus(`Load failed: ${raw}`);
+    }
     loadBtn.disabled = false;
     modelSelect.disabled = false;
     contextArea.readOnly = false;
@@ -169,3 +191,16 @@ maxTokensInput.addEventListener("change", refreshTokenCount);
 populateModels();
 setBusyState(false);
 refreshTokenCount().catch(() => undefined);
+
+void (async () => {
+  const bootCheck = await checkWebGPU();
+  if (!bootCheck.ok) {
+    const bannerEl = document.getElementById("webgpu-warning");
+    if (bannerEl) {
+      bannerEl.textContent = bootCheck.message;
+      bannerEl.classList.remove("hidden");
+    }
+    loadBtn.disabled = true;
+    setStatus(`WebGPU unavailable (${bootCheck.kind}) — see the banner at the top.`);
+  }
+})();
