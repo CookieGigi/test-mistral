@@ -2,7 +2,9 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - vibe/webllm-agentic-loop-b341fc
   workflow_dispatch:
 
 permissions:
