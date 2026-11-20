@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  base: "/test-mistral/",
+  base: "./",
   build: {
     target: "es2022",
   },

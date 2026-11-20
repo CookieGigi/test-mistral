@@ -2,7 +2,9 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - vibe/webllm-agentic-loop-b341fc
   workflow_dispatch:
 
 permissions:
@@ -23,14 +25,33 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: webllm-agentic-loop/package-lock.json
-      - run: npm ci
+          cache-dependency-path: |
+            webllm-agentic-loop/package-lock.json
+            webllm-agent-canvas/package-lock.json
+
+      - name: Build webllm-agentic-loop
         working-directory: webllm-agentic-loop
-      - run: npm run build
-        working-directory: webllm-agentic-loop
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build webllm-agent-canvas
+        working-directory: webllm-agent-canvas
+        run: |
+          npm ci
+          npm run build
+
+      - name: Assemble site
+        run: |
+          mkdir -p gh-dist/loop gh-dist/canvas
+          cp -r webllm-agentic-loop/dist/* gh-dist/loop/
+          cp -r webllm-agent-canvas/dist/* gh-dist/canvas/
+          cp pages/index.html gh-dist/index.html
+          touch gh-dist/.nojekyll
+
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: webllm-agentic-loop/dist
+          path: gh-dist
 
   deploy:
     needs: build
