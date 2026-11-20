@@ -4,6 +4,7 @@ import { runAgent, type AgentEvent } from "./agent";
 import { computeBudget, countTokens, estimateTokens } from "./tokens";
 import { deleteSection, parseSections, togglePin, trimToFit } from "./canvas";
 import { MODES } from "./modes";
+import { checkWebGPU } from "./gpu";
 
 const DEFAULT_MODEL = "Qwen2.5-0.5B-Instruct-q4f16_1-MLC";
 const CURATED = [
@@ -277,6 +278,15 @@ async function loadModel() {
   const modelId = modelSelect.value;
   loadBtn.disabled = true;
   modelSelect.disabled = true;
+  setStatus("Checking WebGPU availability…");
+  const gpuCheck = await checkWebGPU();
+  if (!gpuCheck.ok) {
+    banner(gpuCheck.message);
+    setStatus(`Cannot load (${gpuCheck.kind}). ${gpuCheck.message.split("\n")[0]}`);
+    loadBtn.disabled = false;
+    modelSelect.disabled = false;
+    return;
+  }
   canvasEl.readOnly = true;
   setStatus(`Loading ${modelId} — first run downloads the weights…`);
   try {
@@ -293,12 +303,32 @@ async function loadModel() {
     trimBtn.disabled = false;
     await refreshMeter(true);
   } catch (e) {
-    setStatus(`Load failed: ${e instanceof Error ? e.message : String(e)}`);
+    const raw = e instanceof Error ? e.message : String(e);
+    setStatus(await classifyLoadError(raw));
     engine = null;
     loadBtn.disabled = false;
     modelSelect.disabled = false;
     canvasEl.readOnly = false;
   }
+}
+
+function classifyLoadError(raw: string): string {
+  if (/maxComputeWorkgroupStorageSize/i.test(raw)) {
+    const limit = /limit=(\d+)/.exec(raw)?.[1];
+    return `Load failed: this browser caps WebGPU compute shared memory at ${limit ?? "16"}K bytes but WebLLM needs 32K. Firefox cannot run WebLLM today — use Chrome or Edge 113+.`;
+  }
+  if (/compatible GPU/i.test(raw)) {
+    return "Load failed: no compatible GPU. Enable hardware acceleration (Chrome Settings → System), check chrome://gpu, and in VMs/remote desktop you need GPU pass-through.";
+  }
+  return `Load failed: ${raw}`;
+}
+
+function banner(message: string) {
+  const el = document.getElementById("webgpu-warning");
+  if (!el) return;
+  el.textContent = message;
+  el.classList.remove("hidden");
+  el.style.whiteSpace = "pre-line";
 }
 
 /* ---------- run ---------- */
@@ -537,11 +567,15 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-if (!("gpu" in navigator)) {
-  webgpuWarning.textContent =
-    "This browser does not expose WebGPU (navigator.gpu). Use Chrome/Edge 113+ (or a recent Firefox/Safari) to run the agent.";
-  webgpuWarning.classList.remove("hidden");
-}
+void (async () => {
+  const bootCheck = await checkWebGPU();
+  if (!bootCheck.ok) {
+    banner(bootCheck.message);
+    loadBtn.disabled = true;
+    loadBtn.title = bootCheck.message.split("\n")[0];
+    setStatus(`WebGPU unavailable (${bootCheck.kind}) — see the banner at the top.`);
+  }
+})();
 
 /* ---------- boot ---------- */
 

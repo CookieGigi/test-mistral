@@ -15,6 +15,13 @@
         --danger: #e5534b;
       }
       * { box-sizing: border-box; }
+      #webgpu-warning {
+        padding: 6px 14px;
+        background: #ffb454;
+        color: #201400;
+        font-size: 13px;
+        white-space: pre-line;
+      }
       body {
         margin: 0;
         font-family: system-ui, -apple-system, sans-serif;
@@ -96,6 +103,7 @@
     </style>
   </head>
   <body>
+    <div id="webgpu-warning" class="banner hidden"></div>
     <header>
       <h1>WebLLM Agentic Loop</h1>
       <select id="model" aria-label="Model"></select>
