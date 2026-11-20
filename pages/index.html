@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebLLM Playground — in-browser agents</title>
+    <style>
+      :root {
+        --bg: #0f1115;
+        --panel: #161a22;
+        --panel-2: #1d2330;
+        --border: #2a3142;
+        --text: #dde3ee;
+        --muted: #8b93a7;
+        --accent: #7c5cff;
+        --accent-2: #38d4ae;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background:
+          radial-gradient(1000px 500px at 20% -10%, rgba(124, 92, 255, 0.18), transparent),
+          radial-gradient(800px 420px at 90% 110%, rgba(56, 212, 174, 0.14), transparent),
+          var(--bg);
+        color: var(--text);
+        font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+        padding: 32px 16px;
+      }
+      main { max-width: 880px; width: 100%; }
+      h1 { font-size: 30px; margin: 0 0 6px; letter-spacing: 0.3px; }
+      h1 span { color: var(--accent); }
+      p.lede { color: var(--muted); margin: 0 0 28px; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+      a.card {
+        display: block;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 20px 22px;
+        text-decoration: none;
+        color: var(--text);
+        transition: border-color 0.15s, transform 0.15s;
+      }
+      a.card:hover { border-color: var(--accent); transform: translateY(-2px); }
+      .card h2 { margin: 0 0 6px; font-size: 18px; }
+      .card .tag {
+        display: inline-block;
+        font-size: 11px;
+        font-family: ui-monospace, monospace;
+        color: var(--accent-2);
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        padding: 2px 8px;
+        border-radius: 999px;
+        margin-bottom: 10px;
+      }
+      .card p { margin: 0; color: var(--muted); font-size: 14px; }
+      footer { margin-top: 28px; color: var(--muted); font-size: 13px; }
+      footer a { color: var(--accent-2); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>WebLLM <span>Playground</span></h1>
+      <p class="lede">
+        Two experiments built on <a style="color: var(--accent-2)" href="https://github.com/mlc-ai/web-llm">WebLLM</a>:
+        models run fully in your browser via WebGPU — no server, no API keys.
+      </p>
+      <div class="grid">
+        <a class="card" href="./canvas/">
+          <span class="tag">the canvas</span>
+          <h2>An agent that lives in your textarea</h2>
+          <p>
+            The whole textarea is the agent's memory and workspace. It reads it, rewrites
+            it through directives (<code>[[write]]</code>, <code>[[find]]</code>,
+            <code>[[ask]]</code>…), snapshots every step, pauses mid-mission to ask you
+            questions, and auto-trims its memory to fit the context window.
+          </p>
+        </a>
+        <a class="card" href="./loop/">
+          <span class="tag">agentic loop</span>
+          <h2>Minimal agentic loop</h2>
+          <p>
+            The seed experiment: one editable text area is the entire context. Each run
+            appends the model's output back into the same box, feeding on itself —
+            with live tokenizer budget capped to the model's context window.
+          </p>
+        </a>
+      </div>
+      <footer>
+        Runs best in Chrome / Edge 113+ (WebGPU). First model load downloads the weights
+        (~300&nbsp;MB for the default 0.5B). Sources:
+        <a href="https://github.com/CookieGigi/test-mistral">CookieGigi/test-mistral</a>
+      </footer>
+    </main>
+  </body>
+</html>
